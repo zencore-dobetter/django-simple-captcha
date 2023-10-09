@@ -65,7 +65,7 @@ def huge_words_and_punctuation_challenge():
     return word.upper(), word.lower()
 
 
-def noise_arcs(draw, image):
+def noise_arcs(draw, image, random_generator=random):
     size = image.size
     draw.arc([-20, -20, size[0], 20], 0, 295, fill=settings.CAPTCHA_FOREGROUND_COLOR)
     draw.line(
@@ -75,21 +75,21 @@ def noise_arcs(draw, image):
     return draw
 
 
-def noise_dots(draw, image):
+def noise_dots(draw, image, random_generator=random):
     size = image.size
     for p in range(int(size[0] * size[1] * 0.1)):
         draw.point(
-            (random.randint(0, size[0]), random.randint(0, size[1])),
+            (random_generator.randint(0, size[0]), random_generator.randint(0, size[1])),
             fill=settings.CAPTCHA_FOREGROUND_COLOR,
         )
     return draw
 
 
-def noise_null(draw, image):
+def noise_null(draw, image, random_generator=random):
     return draw
 
 
-def post_smooth(image):
+def post_smooth(image, random_generator=random):
     from PIL import ImageFilter
 
     return image.filter(ImageFilter.SMOOTH)

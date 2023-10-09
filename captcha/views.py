@@ -47,14 +47,14 @@ def captcha_image(request, key, scale=1):
         # HTTP 410 Gone status so that crawlers don't index these expired urls.
         return HttpResponse(status=410)
 
-    random.seed(key)  # Do not generate different images for the same key
+    private_random_generator = random.Random(key)  # Do not generate different images for the same key
 
     text = store.challenge
 
     if isinstance(settings.CAPTCHA_FONT_PATH, str):
         fontpath = settings.CAPTCHA_FONT_PATH
     elif isinstance(settings.CAPTCHA_FONT_PATH, (list, tuple)):
-        fontpath = random.choice(settings.CAPTCHA_FONT_PATH)
+        fontpath = private_random_generator.choice(settings.CAPTCHA_FONT_PATH)
     else:
         raise ImproperlyConfigured(
             "settings.CAPTCHA_FONT_PATH needs to be a path to a font or list of paths to fonts"
@@ -87,7 +87,7 @@ def captcha_image(request, key, scale=1):
         chardraw.text((0, 0), " %s " % char, font=font, fill="#ffffff")
         if settings.CAPTCHA_LETTER_ROTATION:
             charimage = charimage.rotate(
-                random.randrange(*settings.CAPTCHA_LETTER_ROTATION),
+                private_random_generator.randrange(*settings.CAPTCHA_LETTER_ROTATION),
                 expand=0,
                 resample=Image.BICUBIC,
             )
@@ -123,9 +123,9 @@ def captcha_image(request, key, scale=1):
     draw = ImageDraw.Draw(image)
 
     for f in settings.noise_functions():
-        draw = f(draw, image)
+        draw = f(draw, image, random_generator=private_random_generator)
     for f in settings.filter_functions():
-        image = f(image)
+        image = f(image, random_generator=private_random_generator)
 
     out = BytesIO()
     image.save(out, "PNG")
@@ -134,13 +134,6 @@ def captcha_image(request, key, scale=1):
     response = HttpResponse(content_type="image/png")
     response.write(out.read())
     response["Content-length"] = out.tell()
-
-    # At line :50 above we fixed the random seed so that we always generate the
-    # same image, see: https://github.com/mbi/django-simple-captcha/pull/194
-    # This is a problem though, because knowledge of the seed will let an attacker
-    # predict the next random (globally). We therefore reset the random here.
-    # Reported in https://github.com/mbi/django-simple-captcha/pull/221
-    random.seed()
 
     return response
 
